@@ -39,6 +39,12 @@ create policy "anon can insert app_state"
   to anon
   with check (true);
 
--- 4. 실시간 동기화(Realtime) 활성화 — 한 사람이 저장하면 다른 사람 화면에도
+-- 4. RLS 정책만으로는 부족하다 — Postgres는 테이블 자체에 대한 권한(GRANT)이 먼저 있어야
+--    그 다음에 RLS 정책이 "어느 행"을 허용할지 판단한다. Supabase 대시보드 UI로 테이블을
+--    만들면 이 GRANT가 자동으로 붙지만, SQL로 직접 만들 때는 명시적으로 줘야 한다.
+grant usage on schema public to anon;
+grant select, insert, update on app_state to anon;
+
+-- 5. 실시간 동기화(Realtime) 활성화 — 한 사람이 저장하면 다른 사람 화면에도
 --    자동으로 반영되도록 UPDATE 이벤트를 브로드캐스트한다.
 alter publication supabase_realtime add table app_state;
