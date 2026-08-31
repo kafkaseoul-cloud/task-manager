@@ -665,8 +665,8 @@
   // Supabase 프로젝트 생성 후 Settings > API 에서 Project URL과 anon public key를
   // 그대로 복사해 아래 두 값에 채워 넣으면 된다. anon key는 비밀값이 아니라
   // (RLS 정책으로 접근을 제어) 클라이언트 코드에 그대로 두는 것이 Supabase의 정상 사용법이다.
-  var SUPABASE_URL = "YOUR_SUPABASE_PROJECT_URL";
-  var SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+  var SUPABASE_URL = "https://wlupdlhffflwrtzbqgdj.supabase.co";
+  var SUPABASE_ANON_KEY = "sb_publishable_BLuooN8BbeOypkalV_YswQ_-vtxGnGB";
   var SUPABASE_CONFIGURED = SUPABASE_URL.indexOf("YOUR_SUPABASE") !== 0;
   var STATE_ROW_ID = 1;
   var sb = SUPABASE_CONFIGURED ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
