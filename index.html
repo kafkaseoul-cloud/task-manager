@@ -457,6 +457,17 @@
           <option value="삭제">삭제</option>
         </select>
       </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label class="field-label" for="fWorkDate">작업일</label>
+          <input class="input" type="text" inputmode="numeric" id="fWorkDate" name="workDate" placeholder="20260831" maxlength="10" autocomplete="off">
+          <div class="field-help" id="fWorkDateHelp"></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="fWorker">작업자</label>
+          <input class="input" id="fWorker" name="worker" maxlength="30">
+        </div>
+      </div>
       <div class="field-group">
         <label class="field-label" for="fNote">비고</label>
         <textarea class="input" id="fNote" name="note" maxlength="200"></textarea>
@@ -806,13 +817,13 @@
       }
     }
 
-    var colCount = 5 + (def.hasDates ? 2 : 0) + (def.hasDeviceType ? 1 : 0);
+    var colCount = 7 + (def.hasDates ? 2 : 0) + (def.hasDeviceType ? 1 : 0);
 
     var headCells = ['<th class="col-order">순서</th>'];
     if (def.hasDeviceType) headCells.push('<th>기기유형</th>');
     headCells.push('<th>JIRA</th>', '<th>배너명</th>');
     if (def.hasDates) headCells.push('<th>시작</th>', '<th>종료</th>');
-    headCells.push('<th>요청자</th>', '<th>구분</th>', '<th>비고</th>', '<th class="col-actions">관리</th>');
+    headCells.push('<th>요청자</th>', '<th>구분</th>', '<th>작업일</th>', '<th>작업자</th>', '<th>비고</th>', '<th class="col-actions">관리</th>');
 
     var rowsHtml;
     if (visibleItems.length === 0){
@@ -848,6 +859,8 @@
             STATUS_OPTIONS.map(function(s){ return '<option value="' + s + '"' + (s===it.status?" selected":"") + '>' + s + '</option>'; }).join("") +
           '</select>' +
         '</td>');
+        cells.push('<td class="num" data-label="작업일">' + fmtDate(it.workDate) + '</td>');
+        cells.push('<td data-label="작업자">' + (it.worker ? escapeHtml(it.worker) : "—") + '</td>');
         cells.push('<td class="note-cell" data-label="비고" title="' + escapeHtml(it.note || "") + '">' + (it.note ? escapeHtml(it.note) : "—") + '</td>');
         cells.push('<td class="col-actions" data-label="관리">' +
           '<div class="row-actions">' +
@@ -903,6 +916,8 @@
         }
         cells.push('<td data-label="요청자">' + (it.requester ? escapeHtml(it.requester) : "—") + '</td>');
         cells.push('<td data-label="구분"><span class="status-badge" data-group="' + group + '">' + it.status + '</span></td>');
+        cells.push('<td class="num" data-label="작업일">' + fmtDate(it.workDate) + '</td>');
+        cells.push('<td data-label="작업자">' + (it.worker ? escapeHtml(it.worker) : "—") + '</td>');
         cells.push('<td class="note-cell" data-label="비고" title="' + escapeHtml(it.note || "") + '">' + (it.note ? escapeHtml(it.note) : "—") + '</td>');
         cells.push('<td class="col-actions" data-label="관리">' +
           '<div class="row-actions">' +
@@ -916,7 +931,7 @@
       if (def.hasDeviceType) headCells.push('<th>기기유형</th>');
       headCells.push('<th>JIRA</th>','<th>배너명</th>');
       if (def.hasDates) headCells.push('<th>시작</th>','<th>종료</th>');
-      headCells.push('<th>요청자</th>','<th>구분</th>','<th>비고</th>','<th class="col-actions">관리</th>');
+      headCells.push('<th>요청자</th>','<th>구분</th>','<th>작업일</th>','<th>작업자</th>','<th>비고</th>','<th class="col-actions">관리</th>');
       return (
         '<details class="round">' +
           '<summary>' +
@@ -1022,6 +1037,7 @@
   var itemForm = document.getElementById("itemForm");
   attachDateMask(document.getElementById("fStart"));
   attachDateMask(document.getElementById("fEnd"));
+  attachDateMask(document.getElementById("fWorkDate"));
 
   function getTargetList(ctx){
     var board = state[ctx.boardKey];
@@ -1033,7 +1049,7 @@
   }
 
   function clearItemFormErrors(){
-    ["fNameHelp","fStartHelp","fEndHelp"].forEach(function(id){
+    ["fNameHelp","fStartHelp","fEndHelp","fWorkDateHelp"].forEach(function(id){
       var el = document.getElementById(id);
       el.textContent = "";
       el.classList.remove("is-error");
@@ -1041,6 +1057,7 @@
     itemForm.elements.name.setAttribute("aria-invalid", "false");
     itemForm.elements.startDate && itemForm.elements.startDate.setAttribute("aria-invalid", "false");
     itemForm.elements.endDate && itemForm.elements.endDate.setAttribute("aria-invalid", "false");
+    itemForm.elements.workDate.setAttribute("aria-invalid", "false");
   }
 
   function openItemDialog(ctx, item){
@@ -1050,6 +1067,8 @@
     itemForm.elements.name.value = item ? item.name : "";
     itemForm.elements.jira.value = item ? (item.jira || "") : "";
     itemForm.elements.requester.value = item ? (item.requester || "") : "";
+    itemForm.elements.workDate.value = item ? (item.workDate || "") : "";
+    itemForm.elements.worker.value = item ? (item.worker || "") : "";
     itemForm.elements.note.value = item ? (item.note || "") : "";
     clearItemFormErrors();
 
@@ -1102,6 +1121,14 @@
         return;
       }
     }
+    var workDateVal = itemForm.elements.workDate.value.trim();
+    if (workDateVal && !isValidDateStr(workDateVal)){
+      itemForm.elements.workDate.setAttribute("aria-invalid", "true");
+      document.getElementById("fWorkDateHelp").textContent = "8자리 숫자로 입력해 주세요. 예: 20260831";
+      document.getElementById("fWorkDateHelp").classList.add("is-error");
+      itemForm.elements.workDate.focus();
+      return;
+    }
     if (editingCtx){
       var list = getTargetList(editingCtx);
       var existing = list && list.find(function(i){ return i.id === editingCtx.id; });
@@ -1109,6 +1136,8 @@
       existing.name = name;
       existing.jira = itemForm.elements.jira.value.trim();
       existing.requester = itemForm.elements.requester.value.trim();
+      existing.workDate = workDateVal;
+      existing.worker = itemForm.elements.worker.value.trim();
       existing.note = itemForm.elements.note.value.trim();
       existing.status = itemForm.elements.status.value;
       if (def.hasDates){ existing.startDate = itemForm.elements.startDate.value; existing.endDate = itemForm.elements.endDate.value; }
@@ -1132,6 +1161,8 @@
         id: uid(), order: maxOrder + 1, name: name,
         jira: itemForm.elements.jira.value.trim(),
         requester: itemForm.elements.requester.value.trim(),
+        workDate: workDateVal,
+        worker: itemForm.elements.worker.value.trim(),
         note: itemForm.elements.note.value.trim(),
         status: "유지"
       };
@@ -1313,6 +1344,10 @@
       var next = Object.assign({}, i);
       next.order = idx + 1;
       next.status = "유지";
+      // 작업일·작업자는 "이번 라운드에 누가 언제 손댔는지"를 나타내는 값이라
+      // 새 라운드가 시작되면 다시 비워 둔다 (이력에는 이전 값이 그대로 남는다).
+      next.workDate = "";
+      next.worker = "";
       return next;
     });
 
