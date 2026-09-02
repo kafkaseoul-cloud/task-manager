@@ -651,6 +651,10 @@
 
   var STATUS_OPTIONS = ["유지","연장","수정","종료","삭제"];
   var STATUS_GROUP = { "유지":"keep", "연장":"keep", "수정":"modify", "종료":"remove", "삭제":"remove" };
+  // 단말 목록 상단 배너의 기기유형 표시·정렬 순서 — 필터 칩, '전체' 보기 그룹핑,
+  // 이력(히스토리) 목록이 모두 이 순서 하나를 기준으로 삼는다.
+  var DEVICE_TYPES = ["휴대폰","태블릿","워치"];
+  var DEVICE_TYPE_RANK = { "휴대폰":0, "태블릿":1, "워치":2 };
   var BOARD_DEFS = {
     billboard: { label: "모바일 서브메인 빌보드", hasDates: true, hasDeviceType: false },
     device:    { label: "단말 목록 상단 배너",   hasDates: false, hasDeviceType: true }
@@ -671,6 +675,14 @@
     var parts = iso.split("-");
     if (parts.length !== 3) return iso;
     return parseInt(parts[1],10) + "/" + parseInt(parts[2],10);
+  }
+  // 기기유형 순서(DEVICE_TYPE_RANK) 우선, 같은 유형 안에서는 전시순서로 정렬한다.
+  // '전체' 보기의 라이브 TO-BE와 이력(히스토리) 양쪽에서 공통으로 쓴다.
+  function deviceTypeThenOrder(a, b){
+    var ra = DEVICE_TYPE_RANK[a.deviceType] != null ? DEVICE_TYPE_RANK[a.deviceType] : 99;
+    var rb = DEVICE_TYPE_RANK[b.deviceType] != null ? DEVICE_TYPE_RANK[b.deviceType] : 99;
+    if (ra !== rb) return ra - rb;
+    return a.order - b.order;
   }
   function isValidDateStr(s){
     var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
@@ -816,7 +828,7 @@
     var filterHtml = "";
     var reorderDisabled = false;
     if (def.hasDeviceType){
-      var chips = ["전체","휴대폰","워치","태블릿"];
+      var chips = ["전체"].concat(DEVICE_TYPES);
       filterHtml = '<div class="device-filter" role="group" aria-label="기기유형 필터">' +
         chips.map(function(c){
           return '<button type="button" class="device-filter__chip" data-device-filter="' + c + '" aria-pressed="' + (deviceFilter === c) + '">' + c + '</button>';
@@ -827,13 +839,7 @@
         // 전시순서는 기기유형별로 독립적이라 '전체' 보기에서는 순서를 섞어 바꿀 수 없다.
         // 기기유형별로 묶어서 보여주고, 순서 변경 컨트롤은 비활성화한다.
         reorderDisabled = true;
-        var typeRank = { "휴대폰":0, "워치":1, "태블릿":2 };
-        visibleItems = items.slice().sort(function(a,b){
-          var ra = typeRank[a.deviceType] != null ? typeRank[a.deviceType] : 99;
-          var rb = typeRank[b.deviceType] != null ? typeRank[b.deviceType] : 99;
-          if (ra !== rb) return ra - rb;
-          return a.order - b.order;
-        });
+        visibleItems = items.slice().sort(deviceTypeThenOrder);
       }
     }
 
@@ -924,7 +930,7 @@
       return '<div class="history"><div class="history__heading">이력</div><p style="color:var(--muted); font-size:0.875rem;">아직 기록된 라운드가 없습니다.</p></div>';
     }
     var body = rounds.map(function(r){
-      var rows = r.items.slice().sort(function(a,b){ return a.order - b.order; }).map(function(it){
+      var rows = r.items.slice().sort(deviceTypeThenOrder).map(function(it){
         var group = STATUS_GROUP[it.status] || "keep";
         var cells = ['<td class="num" data-label="순서">' + it.order + '</td>'];
         if (def.hasDeviceType) cells.push('<td data-label="기기유형"><span class="device-chip" data-type="' + escapeHtml(it.deviceType) + '">' + escapeHtml(it.deviceType) + '</span></td>');
