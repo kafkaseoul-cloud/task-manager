@@ -805,6 +805,10 @@
 
   var activeBoard = "billboard";
   var deviceFilter = "전체";
+  // render()가 이력 <details>를 매번 새로 만들기 때문에, 펼친 상태를 여기 따로
+  // 기억해뒀다가 다시 그릴 때 그대로 복원한다 (안 그러면 한 항목만 수정해도
+  // 다시 그려지면서 방금 펼친 아코디언이 닫혀버린다).
+  var openRoundIds = new Set();
 
   /* ---------------- rendering ---------------- */
 
@@ -975,7 +979,7 @@
       if (def.hasDates) headCells.push('<th>시작</th>','<th>종료</th>');
       headCells.push('<th>요청자</th>','<th>구분</th>','<th>작업일</th>','<th>작업자</th>','<th>비고</th>','<th class="col-actions">관리</th>');
       return (
-        '<details class="round">' +
+        '<details class="round" data-round-id="' + r.id + '"' + (openRoundIds.has(r.id) ? " open" : "") + '>' +
           '<summary>' +
             '<span class="round__date">' + r.workDate + '</span>' +
             '<span class="round__assignee">담당자 ' + escapeHtml(r.assignee) + '</span>' +
@@ -1685,6 +1689,13 @@
       e.target.blur();
     }
   });
+  // 'toggle' 이벤트는 버블링되지 않아 캡처 단계에서 잡아야 위임이 가능하다.
+  document.getElementById("boardHost").addEventListener("toggle", function(e){
+    if (!e.target.matches || !e.target.matches("details.round")) return;
+    var id = e.target.dataset.roundId;
+    if (e.target.open) openRoundIds.add(id);
+    else openRoundIds.delete(id);
+  }, true);
 
   document.querySelectorAll("[data-close-dialog]").forEach(function(btn){
     btn.addEventListener("click", function(){ btn.closest("dialog").close(); });
