@@ -45,6 +45,9 @@
     --warn: oklch(60% 0.15 75);
     --warn-soft: oklch(60% 0.15 75 / 16%);
     --warn-ink: oklch(32% 0.11 65);
+    --info: oklch(62% 0.14 230);
+    --info-soft: oklch(62% 0.14 230 / 14%);
+    --info-ink: oklch(32% 0.10 230);
 
     /* Device-type tags (단말 목록 상단 배너 전용) — categorical, not accent. */
     --device-phone-soft: oklch(58% 0.20 256 / 12%);
@@ -236,8 +239,10 @@
   select.status-select:hover{ background-color: var(--surface-pearl); }
   select.status-select:focus-visible{ outline-color: var(--primary-focus); }
   select.status-select[data-group="keep"]{ background-color: var(--success-soft); color: var(--success-ink); border-color: transparent; }
+  select.status-select[data-group="info"]{ background-color: var(--info-soft); color: var(--info-ink); border-color: transparent; }
   select.status-select[data-group="modify"]{ background-color: var(--warn-soft); color: var(--warn-ink); border-color: transparent; }
   select.status-select[data-group="remove"]{ background-color: var(--error-soft); color: var(--error-ink); border-color: transparent; }
+  select.status-select[data-group="neutral"]{ background-color: var(--disabled); color: var(--muted-80); border-color: transparent; }
 
   .status-badge{
     display:inline-flex; align-items:center; gap:5px; font-size:0.6875rem; font-weight:600;
@@ -246,6 +251,8 @@
   .status-badge::before{ content:""; width:6px; height:6px; border-radius:50%; }
   .status-badge[data-group="keep"]{ background: var(--success-soft); color: var(--success-ink); }
   .status-badge[data-group="keep"]::before{ background: var(--success); }
+  .status-badge[data-group="info"]{ background: var(--info-soft); color: var(--info-ink); }
+  .status-badge[data-group="info"]::before{ background: var(--info); }
   .status-badge[data-group="modify"]{ background: var(--warn-soft); color: var(--warn-ink); }
   .status-badge[data-group="modify"]::before{ background: var(--warn); }
   .status-badge[data-group="remove"]{ background: var(--error-soft); color: var(--error-ink); }
@@ -262,8 +269,10 @@
   .legend__item{ display:inline-flex; align-items:center; gap:6px; }
   .legend__dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
   .legend__dot[data-group="keep"]{ background: var(--success); }
+  .legend__dot[data-group="info"]{ background: var(--info); }
   .legend__dot[data-group="modify"]{ background: var(--warn); }
   .legend__dot[data-group="remove"]{ background: var(--error); }
+  .legend__dot[data-group="neutral"]{ background: var(--muted); }
 
   /* ---------- history ---------- */
   .history{ margin-top: var(--space-xl); }
@@ -651,7 +660,11 @@
   "use strict";
 
   var STATUS_OPTIONS = ["신규","유지","연장","수정","종료","삭제"];
+  // STATUS_GROUP은 라운드 기록 시의 동작(다음 TO-BE에 남는지/빠지는지)을 결정하는
+  // 기능적 분류다 — 색은 STATUS_COLOR가 따로 맡는다. 예를 들어 수정은 색은 삭제와
+  // 같은 빨강이지만, 기능적으로는 계속 남는 항목(modify)이라 여기선 다르게 취급한다.
   var STATUS_GROUP = { "신규":"keep", "유지":"keep", "연장":"keep", "수정":"modify", "종료":"remove", "삭제":"remove" };
+  var STATUS_COLOR = { "신규":"keep", "유지":"info", "연장":"info", "수정":"remove", "종료":"neutral", "삭제":"remove" };
   // 단말 목록 상단 배너의 기기유형 표시·정렬 순서 — 필터 칩, '전체' 보기 그룹핑,
   // 이력(히스토리) 목록이 모두 이 순서 하나를 기준으로 삼는다.
   var DEVICE_TYPES = ["휴대폰","태블릿","워치"];
@@ -861,7 +874,7 @@
         '</td></tr>';
     } else {
       rowsHtml = visibleItems.map(function(it, idx){
-        var group = STATUS_GROUP[it.status] || "keep";
+        var group = STATUS_COLOR[it.status] || "keep";
         var cells = [
           '<td class="col-order num" data-label="순서">' +
             '<div class="reorder-group"' + (reorderDisabled ? ' title="기기유형 탭에서 순서를 변경하세요"' : '') + '>' +
@@ -900,9 +913,11 @@
     }
 
     var legendHtml = '<div class="legend">' +
-      '<span class="legend__item"><span class="legend__dot" data-group="keep"></span>신규 · 유지 · 연장 — 다음 라운드 TO-BE에 그대로 반영</span>' +
-      '<span class="legend__item"><span class="legend__dot" data-group="modify"></span>수정 — 반영되고 TO-BE에도 수정 표시</span>' +
-      '<span class="legend__item"><span class="legend__dot" data-group="remove"></span>종료 · 삭제 — 다음 라운드 TO-BE에서 제외</span>' +
+      '<span class="legend__item"><span class="legend__dot" data-group="keep"></span>신규 — 다음 라운드 TO-BE에 그대로 반영</span>' +
+      '<span class="legend__item"><span class="legend__dot" data-group="info"></span>유지 · 연장 — 다음 라운드 TO-BE에 그대로 반영</span>' +
+      '<span class="legend__item"><span class="legend__dot" data-group="remove"></span>수정 — 반영되고 TO-BE에도 수정 표시</span>' +
+      '<span class="legend__item"><span class="legend__dot" data-group="neutral"></span>종료 — 다음 라운드 TO-BE에서 제외</span>' +
+      '<span class="legend__item"><span class="legend__dot" data-group="remove"></span>삭제 — 다음 라운드 TO-BE에서 제외</span>' +
     '</div>';
 
     var historyHtml = renderHistory(boardKey);
@@ -932,7 +947,7 @@
     }
     var body = rounds.map(function(r){
       var rows = r.items.slice().sort(deviceTypeThenOrder).map(function(it){
-        var group = STATUS_GROUP[it.status] || "keep";
+        var group = STATUS_COLOR[it.status] || "keep";
         var cells = ['<td class="num" data-label="순서">' + it.order + '</td>'];
         if (def.hasDeviceType) cells.push('<td data-label="기기유형"><span class="device-chip" data-type="' + escapeHtml(it.deviceType) + '">' + escapeHtml(it.deviceType) + '</span></td>');
         cells.push('<td class="jira-cell" data-label="JIRA">' + (it.jira ? escapeHtml(it.jira) : "—") + '</td>');
@@ -1366,11 +1381,14 @@
   }
 
   function updateRoundPreview(boardKey){
-    var counts = statusPreview(state[boardKey].items);
+    var counts = { "신규":0, "유지":0, "연장":0, "수정":0, "종료":0, "삭제":0 };
+    state[boardKey].items.forEach(function(it){ if (counts[it.status] != null) counts[it.status]++; });
     document.getElementById("roundPreview").innerHTML =
-      '<span class="round-preview__stat"><span class="legend__dot" data-group="keep"></span>신규·유지·연장 <b>' + counts.keep + '</b>건</span>' +
-      '<span class="round-preview__stat"><span class="legend__dot" data-group="modify"></span>수정 <b>' + counts.modify + '</b>건</span>' +
-      '<span class="round-preview__stat"><span class="legend__dot" data-group="remove"></span>종료·삭제 <b>' + counts.remove + '</b>건</span>';
+      '<span class="round-preview__stat"><span class="legend__dot" data-group="keep"></span>신규 <b>' + counts["신규"] + '</b>건</span>' +
+      '<span class="round-preview__stat"><span class="legend__dot" data-group="info"></span>유지·연장 <b>' + (counts["유지"] + counts["연장"]) + '</b>건</span>' +
+      '<span class="round-preview__stat"><span class="legend__dot" data-group="remove"></span>수정 <b>' + counts["수정"] + '</b>건</span>' +
+      '<span class="round-preview__stat"><span class="legend__dot" data-group="neutral"></span>종료 <b>' + counts["종료"] + '</b>건</span>' +
+      '<span class="round-preview__stat"><span class="legend__dot" data-group="remove"></span>삭제 <b>' + counts["삭제"] + '</b>건</span>';
   }
 
   roundForm.addEventListener("submit", function(e){
