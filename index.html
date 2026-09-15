@@ -380,7 +380,7 @@
   <header class="app__header">
     <div>
       <h1>배너 및 단말 관리</h1>
-      <p>배너 등록 · 교체 현황을 라운드별로 기록합니다.<br>변동 사항을 반영 후 '새 현황 기록'을 등록해주세요. 지금의 TO-BE가 AS-IS로 넘어가고, 각 항목의 구분에 따라 다음 TO-BE가 다시 만들어집니다.<br>하단의 이력 또한 수정 및 삭제가 가능합니다.</p>
+      <p>배너 등록 · 교체 현황 이력을 기록합니다.<br>변동 사항을 반영 후 '새 현황 기록'을 등록해주세요.<br>지금의 TO-BE가 AS-IS로 넘어가고, 각 항목의 구분에 따라 다음 TO-BE가 다시 만들어집니다.<br>하단의 이력 또한 수정 및 삭제가 가능합니다.</p>
     </div>
     <div class="app__meta">
       <span class="app__meta-text" id="lastSavedText">불러오는 중…</span>
@@ -429,8 +429,8 @@
           <label class="field-label" for="fDeviceType"><span class="req">*</span> 기기유형</label>
           <select class="input" id="fDeviceType" name="deviceType">
             <option value="휴대폰">휴대폰</option>
-            <option value="워치">워치</option>
             <option value="태블릿">태블릿</option>
+            <option value="워치">워치</option>
           </select>
         </div>
       </div>
@@ -649,8 +649,8 @@
 (function(){
   "use strict";
 
-  var STATUS_OPTIONS = ["유지","연장","수정","종료","삭제"];
-  var STATUS_GROUP = { "유지":"keep", "연장":"keep", "수정":"modify", "종료":"remove", "삭제":"remove" };
+  var STATUS_OPTIONS = ["신규","유지","연장","수정","종료","삭제"];
+  var STATUS_GROUP = { "신규":"keep", "유지":"keep", "연장":"keep", "수정":"modify", "종료":"remove", "삭제":"remove" };
   // 단말 목록 상단 배너의 기기유형 표시·정렬 순서 — 필터 칩, '전체' 보기 그룹핑,
   // 이력(히스토리) 목록이 모두 이 순서 하나를 기준으로 삼는다.
   var DEVICE_TYPES = ["휴대폰","태블릿","워치"];
@@ -899,7 +899,7 @@
     }
 
     var legendHtml = '<div class="legend">' +
-      '<span class="legend__item"><span class="legend__dot" data-group="keep"></span>유지 · 연장 — 다음 라운드 TO-BE에 그대로 반영</span>' +
+      '<span class="legend__item"><span class="legend__dot" data-group="keep"></span>신규 · 유지 · 연장 — 다음 라운드 TO-BE에 그대로 반영</span>' +
       '<span class="legend__item"><span class="legend__dot" data-group="modify"></span>수정 — 반영되고 TO-BE에도 수정 표시</span>' +
       '<span class="legend__item"><span class="legend__dot" data-group="remove"></span>종료 · 삭제 — 다음 라운드 TO-BE에서 제외</span>' +
     '</div>';
@@ -1219,7 +1219,7 @@
         workDate: workDateVal,
         worker: itemForm.elements.worker.value.trim(),
         note: itemForm.elements.note.value.trim(),
-        status: "유지"
+        status: "신규"
       };
       if (def.hasDates){ newItem.startDate = itemForm.elements.startDate.value; newItem.endDate = itemForm.elements.endDate.value; }
       if (def.hasDeviceType){ newItem.deviceType = itemForm.elements.deviceType.value; }
@@ -1367,7 +1367,7 @@
   function updateRoundPreview(boardKey){
     var counts = statusPreview(state[boardKey].items);
     document.getElementById("roundPreview").innerHTML =
-      '<span class="round-preview__stat"><span class="legend__dot" data-group="keep"></span>유지·연장 <b>' + counts.keep + '</b>건</span>' +
+      '<span class="round-preview__stat"><span class="legend__dot" data-group="keep"></span>신규·유지·연장 <b>' + counts.keep + '</b>건</span>' +
       '<span class="round-preview__stat"><span class="legend__dot" data-group="modify"></span>수정 <b>' + counts.modify + '</b>건</span>' +
       '<span class="round-preview__stat"><span class="legend__dot" data-group="remove"></span>종료·삭제 <b>' + counts.remove + '</b>건</span>';
   }
@@ -1393,11 +1393,17 @@
     var newRound = { id: uid(), workDate: workDate, assignee: assignee, recordedAt: new Date().toISOString(), items: snapshot };
     board.rounds.unshift(newRound);
 
+    var hasDeviceType = BOARD_DEFS[boardKey].hasDeviceType;
+    var orderCounters = {};
     var kept = board.items.filter(function(i){ return STATUS_GROUP[i.status] !== "remove"; });
     kept.sort(function(a,b){ return a.order - b.order; });
-    board.items = kept.map(function(i, idx){
+    board.items = kept.map(function(i){
       var next = Object.assign({}, i);
-      next.order = idx + 1;
+      // 단말판은 기기유형별로 독립된 순번이라, 라운드가 넘어갈 때도 유형별로 따로
+      // 1부터 다시 매긴다 (전체를 한 줄로 이어붙이면 안 된다).
+      var counterKey = hasDeviceType ? (next.deviceType || "") : "__all__";
+      orderCounters[counterKey] = (orderCounters[counterKey] || 0) + 1;
+      next.order = orderCounters[counterKey];
       next.status = "유지";
       // 작업일·작업자·JIRA·요청자는 모두 "그 작업이 어떻게 시작됐는지"를 설명하는
       // 값이라 새 라운드가 시작되면 다시 비워 둔다 — TO-BE는 현재 상태만 보여주고,
