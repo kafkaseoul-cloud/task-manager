@@ -1430,13 +1430,14 @@
       orderCounters[counterKey] = (orderCounters[counterKey] || 0) + 1;
       next.order = orderCounters[counterKey];
       next.status = "유지";
-      // 작업일·작업자·JIRA·요청자는 모두 "그 작업이 어떻게 시작됐는지"를 설명하는
-      // 값이라 새 라운드가 시작되면 다시 비워 둔다 — TO-BE는 현재 상태만 보여주고,
-      // 이 히스토리는 이력에 그대로 남는다.
+      // 작업일·작업자·JIRA·요청자·비고는 모두 "그 작업이 어떻게 진행됐는지"를
+      // 설명하는 값이라 새 라운드가 시작되면 다시 비워 둔다 — TO-BE는 현재 상태만
+      // 보여주고, 이 히스토리는 이력에 그대로 남는다.
       next.workDate = "";
       next.worker = "";
       next.jira = "";
       next.requester = "";
+      next.note = "";
       return next;
     });
 
